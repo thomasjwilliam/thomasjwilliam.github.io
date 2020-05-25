@@ -1,93 +1,42 @@
 <?php
-/*
-THIS FILE USES PHPMAILER INSTEAD OF THE PHP MAIL() FUNCTION
-*/
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+require_once 'phpmailer/PHPMailerAutoload.php';
 
-require 'PHPMailer-master/PHPMailerAutoload.php';
+if (isset($_POST['inputName']) && isset($_POST['inputEmail'])&& isset($_POST['inputMessage'])) {
 
-/*
-*  CONFIGURE EVERYTHING HERE
-*/
-
-// an email address that will be in the From field of the email.
-$fromEmail = 'noreply@domain.com';
-$fromName = 'Rezyme contact form';
-
-// an email address that will receive the email with the output of the form
-$sendToEmail = 'teconce.ceo@gmail.com';
-$sendToName = 'Demo contact form';
-
-// subject of the email
-$subject = 'New message from Rezyme contact form';
-
-// form field names and their translations.
-// array variable name => Text to appear in the email
-$fields = array('name' => 'Name', 'surname' => 'Surname', 'phone' => 'Phone', 'email' => 'Email', 'message' => 'Message');
-
-// message that will be displayed when everything is OK :)
-$okMessage = 'Contact form successfully submitted. Thank you, I will get back to you soon!';
-
-// If something goes wrong, we will display this message.
-$errorMessage = 'There was an error while submitting the form. Please try again later';
-
-/*
-*  LET'S DO THE SENDING
-*/
-
-// if you are not debugging and don't need error reporting, turn this off by error_reporting(0);
-error_reporting(E_ALL & ~E_NOTICE);
-
-try
-{
-    
-    if(count($_POST) == 0) throw new \Exception('Form is empty');
-    
-    $emailTextHtml = "<h1>You have a new message from your contact form</h1><hr>";
-    $emailTextHtml .= "<table>";
-
-    foreach ($_POST as $key => $value) {
-        // If the field exists in the $fields array, include it in the email
-        if (isset($fields[$key])) {
-            $emailTextHtml .= "<tr><th>$fields[$key]</th><td>$value</td></tr>";
-        }
+    //check if any of the inputs are empty
+    if (empty($_POST['inputName']) || empty($_POST['inputEmail']) ||empty($_POST['inputMessage'])) {
+        $data = array('success' => false, 'message' => 'Please fill out the form completely.');
+        echo json_encode($data);
+        exit;
     }
-    $emailTextHtml .= "</table><hr>";
-    $emailTextHtml .= "<p>Have a nice day,<br>Best,<br>Rezyme</p>";
-    
-    $mail = new PHPMailer;
 
-    $mail->setFrom($fromEmail, $fromName);
-    $mail->addAddress($sendToEmail, $sendToName); // you can add more addresses by simply adding another line with $mail->addAddress();
-    $mail->addReplyTo($from);
-    
-    $mail->isHTML(true);
+    //create an instance of PHPMailer
+    $mail = new PHPMailer();
 
-    $mail->Subject = $subject;
-    $mail->msgHTML($emailTextHtml); // this will also create a plain-text version of the HTML email, very handy
-    
-    
+    $mail->From = $_POST['inputEmail'];
+    $mail->FromName = $_POST['inputName'];
+    $mail->AddAddress('your@email.here'); //recipient 
+    $mail->Subject = 'Enquiry from Hencework';
+    $mail->Body = "Name: " . $_POST['inputName'] . "\r\n\r\nMessage: " . stripslashes($_POST['inputMessage']);
+
+    if (isset($_POST['ref'])) {
+        $mail->Body .= "\r\n\r\nRef: " . $_POST['ref'];
+    }
+
     if(!$mail->send()) {
-        throw new \Exception('I could not send the email.' . $mail->ErrorInfo);
+        $data = array('success' => false, 'message' => 'Message could not be sent. Mailer Error: ' . $mail->ErrorInfo);
+        echo json_encode($data);
+        exit;
     }
-    
-    $responseArray = array('type' => 'success', 'message' => $okMessage);
-}
-catch (\Exception $e)
-{
-    // $responseArray = array('type' => 'danger', 'message' => $errorMessage);
-    $responseArray = array('type' => 'danger', 'message' => $e->getMessage());
-}
 
+    $data = array('success' => true, 'message' => 'Thanks! We have received your message.');
+    echo json_encode($data);
 
-// if requested by AJAX request return JSON response
-if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
-    $encoded = json_encode($responseArray);
-    
-    header('Content-Type: application/json');
-    
-    echo $encoded;
-}
-// else just display the message
-else {
-    echo $responseArray['message'];
+} else {
+
+    $data = array('success' => false, 'message' => 'Please fill out the form completely.');
+    echo json_encode($data);
+
 }
